@@ -39,7 +39,7 @@ jobs:
 
             echo "Installing dependencies..."
             pip install --upgrade pip
-            pip install -r requirements.txt
+            pip install -r /opt/mqttapp/requirements.txt
 
             # Restart the service
             sudo systemctl daemon-reload
