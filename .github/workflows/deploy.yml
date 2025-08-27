@@ -19,15 +19,17 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            rm -rf /opt/mqttapp/*
+            echo "Current directory: $(pwd)"
+            ls -la
+            # rm -rf /opt/mqttapp/*
             # Create app directory if it doesn't exist
-            mkdir -p /opt/mqttapp
-            cd /opt/mqttapp
-            git pull
+            # mkdir -p /opt/mqttapp
+            # cd /opt/mqttapp
+            # git pull
 
             # Copy files to VPS
             # cp -rv . /opt/mqttapp/
-            ls -la /opt/mqttapp
+            # ls -la /opt/mqttapp
 
             # Install dependencies
             # Remove existing venv if it exists
@@ -49,4 +51,4 @@ jobs:
             # sudo systemctl restart mqttapp-cleanup.service
 
             # Check service status
-            sudo systemctl status mqttapp.service --no-pager
+            # sudo systemctl status mqttapp.service --no-pager
