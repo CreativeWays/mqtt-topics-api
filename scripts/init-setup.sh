@@ -14,6 +14,8 @@ sudo systemctl enable mqttapp.service
 sudo systemctl start mqttapp.service
 
 # Сервис с таймером очистки
+sudo systemctl enable mqttapp-cleanup.service
+sudo systemctl start mqttapp-cleanup.service
 sudo systemctl enable mqttapp-cleanup.timer
 sudo systemctl start mqttapp-cleanup.timer
 
