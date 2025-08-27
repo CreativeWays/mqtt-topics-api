@@ -1,0 +1,34 @@
+[Unit]
+Description=MQTT Application Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=mqttapp
+Group=mqttapp
+WorkingDirectory=/opt/mqttapp
+Environment=PYTHONPATH=/opt/mqttapp
+
+# Путь к Python в виртуальном окружении
+ExecStart=/opt/mqttapp/venv/bin/python -m src.main
+
+# Перезапуск при сбоях
+Restart=always
+RestartSec=5
+
+# Логирование
+StandardOutput=file:/opt/mqttapp/logs/mqttapp.log
+StandardError=file:/opt/mqttapp/logs/mqttapp-error.log
+
+# Переменные окружения
+Environment=PYTHONUNBUFFERED=1
+
+# Безопасность
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily cleanup of old MQTT data
+Requires=mqttapp-cleanup.service
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
