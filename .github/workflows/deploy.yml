@@ -28,8 +28,18 @@ jobs:
 
             # Install dependencies
             cd /opt/mqttapp
-            source "/opt/mqttapp/bin/activate"
-            python3 -m pip install -r requirements.txt
+            # Remove existing venv if it exists
+            if [ -d "venv" ]; then
+              rm -rf venv
+            fi
+
+            # Create new virtual environment
+            python3 -m venv venv
+            source venv/bin/activate
+
+            echo "Installing dependencies..."
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
             # Restart the service
             sudo systemctl daemon-reload
