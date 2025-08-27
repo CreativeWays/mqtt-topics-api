@@ -24,27 +24,28 @@ jobs:
 
             # Copy files to VPS
             rm -rf /opt/mqttapp/*
-            cp -r . /opt/mqttapp/
+            cp -rv . /opt/mqttapp/
+            ls -la /opt/mqttapp
 
             # Install dependencies
             cd /opt/mqttapp
             # Remove existing venv if it exists
-            if [ -d "venv" ]; then
-              rm -rf venv
-            fi
+            # if [ -d "venv" ]; then
+            #   rm -rf venv
+            # fi
 
             # Create new virtual environment
-            python3 -m venv venv
-            source venv/bin/activate
-
-            echo "Installing dependencies..."
-            pip install --upgrade pip
-            pip install -r /opt/mqttapp/requirements.txt
+            # python3 -m venv venv
+            # source venv/bin/activate
+            #
+            # echo "Installing dependencies..."
+            # pip install --upgrade pip
+            # pip install -r /opt/mqttapp/requirements.txt
 
             # Restart the service
-            sudo systemctl daemon-reload
-            sudo systemctl restart mqttapp.service
-            sudo systemctl restart mqttapp-cleanup.service
+            # sudo systemctl daemon-reload
+            # sudo systemctl restart mqttapp.service
+            # sudo systemctl restart mqttapp-cleanup.service
 
             # Check service status
             sudo systemctl status mqttapp.service --no-pager

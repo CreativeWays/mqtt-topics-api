@@ -1,4 +1,4 @@
 sudo adduser --system --group --home /opt/mqttapp mqttapp
-sudo mkdir -p /opt/mqttapp/{src,logs,data,scripts}
+sudo -u mqttapp mkdir -p /opt/mqttapp/{app,logs,data
 sudo chown -R mqttapp:mqttapp /opt/mqttapp
-sudo chmod -R 755 /opt/mqttapp
+sudo -u mqttapp chmod -R 755 /opt/mqttapp
