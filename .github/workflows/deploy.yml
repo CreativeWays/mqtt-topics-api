@@ -29,6 +29,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            cd /opt/mqttapp
             # Install dependencies
             # Remove existing venv if it exists
             if [ -d "venv" ]; then
