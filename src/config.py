@@ -22,3 +22,9 @@ DB_PATH = str(
 
 # Настройки приложения
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 300))  # Размер пачки
+BATCH_TIMEOUT = int(
+    os.getenv("BATCH_TIMEOUT", 180.0)
+)  # Таймаут в секундах (даже если не набралось BATCH_SIZE)
+UNICORN_PORT = int(os.getenv("UNICORN_PORT", 52933))

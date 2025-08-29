@@ -1,5 +1,5 @@
 [Unit]
-Description=MQTT Application Service
+Description=Sensor Data REST API
 After=network.target
 Wants=network.target
 
@@ -11,15 +11,15 @@ WorkingDirectory=/opt/mqttapp
 Environment=PYTHONPATH=/opt/mqttapp
 
 # Путь к Python в виртуальном окружении
-ExecStart=/opt/mqttapp/venv/bin/python -m src.main
+ExecStart=/opt/mqttapp/venv/bin/python -m src.api_server
 
 # Перезапуск при сбоях
 Restart=always
 RestartSec=5
 
 # Логирование
-StandardOutput=file:/opt/mqttapp/logs/mqttapp.log
-StandardError=file:/opt/mqttapp/logs/mqttapp-error.log
+StandardOutput=file:/opt/mqttapp/logs/api_server.log
+StandardError=file:/opt/mqttapp/logs/api_server-error.log
 
 # Переменные окружения
 Environment=PYTHONUNBUFFERED=1

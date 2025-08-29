@@ -1,9 +1,10 @@
 import logging
 import sqlite3
 from datetime import datetime, timedelta
+from threading import Lock, Timer
 from typing import Tuple
 
-from .config import DB_PATH
+from .config import BATCH_SIZE, BATCH_TIMEOUT, DB_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +13,16 @@ class DatabaseManager:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         self.init_database()
+        # Глобальные переменные для батча
+        self.batch_buffer = []
+        self.batch_lock = Lock()
+        self.batch_timer = None
 
     def get_connection(self) -> sqlite3.Connection:
         """Создает и возвращает соединение с базой данных"""
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row  # Это позволяет использовать row['column_name']
+        return conn
 
     def init_database(self):
         """Инициализирует базу данных и создает таблицы"""
@@ -52,20 +59,57 @@ class DatabaseManager:
 
     def insert_sensor_data(self, topic: str, payload: str) -> bool:
         """Вставляет данные сенсора в базу данных"""
+        # Подготавливаем запись для батча
+        record = (topic, payload)
+        with self.batch_lock:
+            self.batch_buffer.append(record)
+            # Проверяем, достигли ли мы размера батча
+            if len(self.batch_buffer) >= BATCH_SIZE:
+                self.insert_batch()
+            elif len(self.batch_buffer) == 1:
+                # Если это первое сообщение в батче, запускаем таймер
+                self.start_batch_timer()
+
+        return True
+
+    def insert_batch(self) -> bool:
+        """Вставляет данные сенсора в базу данных"""
+        with self.batch_lock:
+            if not self.batch_buffer:
+                # Если буфер пуст, сбрасываем таймер и выходим
+                self.batch_timer = None
+                return False
+
+            current_batch = self.batch_buffer
+            self.batch_buffer = []
+            # Перезапускаем таймер для следующего батча
+            self.batch_timer = None
+            self.start_batch_timer()
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
+                cursor.executemany(
                     "INSERT INTO sensor_data (topic, payload) VALUES (?, ?)",
-                    (topic, payload),
+                    current_batch,
                 )
                 conn.commit()
-                logger.debug(f"Data inserted: {topic} - {payload}")
+                logger.info(f"Data of len {len(current_batch)} inserted")
                 return True
 
         except sqlite3.Error as e:
             logger.error(f"Error inserting data: {e}")
+            # В случае ошибки можно добавить данные обратно в буфер
+            with self.batch_lock:
+                self.batch_buffer = current_batch + self.batch_buffer
             return False
+
+    # Функция для перезапуска таймера
+    def start_batch_timer(self) -> None:
+        if self.batch_timer is None:
+            logger.info("New Timer started")
+            self.batch_timer = Timer(BATCH_TIMEOUT, self.insert_batch)
+            self.batch_timer.daemon = True
+            self.batch_timer.start()
 
     def get_recent_data(self, limit: int = 10) -> list:
         """Получает последние записи из базы данных"""
@@ -195,3 +239,42 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"Error getting database stats: {e}")
             return {}
+
+    def get_sensor_data(self, topic: str, limit: int = 10) -> list:
+        """Получает последние записи из базы данных"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, topic, payload, timestamp
+                    FROM sensor_data
+                    WHERE topic = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                    """,
+                    (topic, limit),
+                )
+                return cursor.fetchall()
+
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching data: {e}")
+            return []
+
+    def get_all_topics(self) -> list:
+        """Получает последние записи из базы данных"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT DISTINCT topic 
+                    FROM sensor_data 
+                    ORDER BY topic
+                    """,
+                )
+                return cursor.fetchall()
+
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching data: {e}")
+            return []

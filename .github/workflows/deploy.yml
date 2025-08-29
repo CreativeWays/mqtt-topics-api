@@ -34,6 +34,7 @@ jobs:
             # Remove existing venv if it exists
             if [ -d "venv" ]; then
               rm -rf venv
+              rm logs/*
             fi
 
             # Create new virtual environment
@@ -48,6 +49,8 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl restart mqttapp.service
             sudo systemctl restart mqttapp-cleanup.service
+            sudo systemctl restart sensor-api.service
 
             # Check service status
             sudo systemctl status mqttapp.service --no-pager
+            sudo systemctl status sensor-api.service --no-pager
