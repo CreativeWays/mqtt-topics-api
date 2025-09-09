@@ -7,7 +7,7 @@ Type=oneshot
 User=mqttapp
 Group=mqttapp
 WorkingDirectory=/opt/mqttapp
-ExecStart=/opt/mqttapp/venv/bin/python /opt/mqttapp/scripts/cleanup.py --auto
+ExecStart=/opt/mqttapp/venv/bin/python -m scripts.cleanup
 
 [Install]
 WantedBy=multi-user.target

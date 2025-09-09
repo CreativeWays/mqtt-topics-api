@@ -1,12 +1,17 @@
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from threading import Lock, Timer
+from threading import RLock, Timer
 from typing import Tuple
 
 from .config import BATCH_SIZE, BATCH_TIMEOUT, DB_PATH
+from .utils.decode_radiohead_payload import decode_radiohead_payload
+from .utils.parse_payload_as_json import parse_payload_as_json
+from .utils.serialize_json_payload_as_str import serialize_json_payload_as_str
 
 logger = logging.getLogger(__name__)
+
+radiohead_topic_name = "radiohead"
 
 
 class DatabaseManager:
@@ -15,7 +20,7 @@ class DatabaseManager:
         self.init_database()
         # Глобальные переменные для батча
         self.batch_buffer = []
-        self.batch_lock = Lock()
+        self.batch_lock = RLock()
         self.batch_timer = None
 
     def get_connection(self) -> sqlite3.Connection:
@@ -60,7 +65,17 @@ class DatabaseManager:
     def insert_sensor_data(self, topic: str, payload: str) -> bool:
         """Вставляет данные сенсора в базу данных"""
         # Подготавливаем запись для батча
-        record = (topic, payload)
+        modified_topic = topic
+        modified_payload = payload
+        if radiohead_topic_name in topic.lower():
+            json_payload = parse_payload_as_json(modified_payload)
+            json_payload["payload"] = decode_radiohead_payload(
+                json_payload.get("payload", [])
+            )
+            modified_topic = f"{topic}/{json_payload['payload']['sensor_id']}"
+            modified_payload = serialize_json_payload_as_str(json_payload)
+
+        record = (modified_topic, modified_payload)
         with self.batch_lock:
             self.batch_buffer.append(record)
             # Проверяем, достигли ли мы размера батча
