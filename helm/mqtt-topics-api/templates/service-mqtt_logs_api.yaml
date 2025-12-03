@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt_logs_api_service
+  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt-logs-api-service
   labels:
     {{- include "mqtt-topics-api.labels" . | nindent 4 }}
     app.kubernetes.io/component: mqtt_logs_api
@@ -11,7 +11,7 @@ spec:
     {{- include "mqtt-topics-api.labels" . | nindent 4 }}
     app.kubernetes.io/component: mqtt_logs_api
   ports:
-    - name: mqtt_logs_api
+    - name: mqtt-logs-api
       protocol: TCP
       port: {{ .Values.mqtt_logs_api.service.port }}
       targetPort: {{ .Values.mqtt_logs_api.service.targetPort }}

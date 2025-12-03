@@ -5,7 +5,7 @@ global:
     pullPolicy: IfNotPresent
   environment: production
   sqlite_data:
-    name: sqlite_data
+    name: sqlite-data
     mountPath: /app/data
     persistence:
       size: 2Gi
@@ -54,7 +54,7 @@ mqtt_logs_cleaner:
 
 env_values:
   MQTT_BROKER: "127.0.0.1"
-  MQTT_PORT: 5293
+  MQTT_PORT: "5293"
   MQTT_TOPIC: "device/OMG_lilygo_rtl_433_ESP_OOK/RTL_433toMQTT/#"
   DB_PATH: "/app/data/app.db"
-  UNICORN_PORT: 5283
+  UNICORN_PORT: "5283"

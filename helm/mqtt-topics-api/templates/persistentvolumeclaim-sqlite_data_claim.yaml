@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "mqtt-topics-api.fullname" . }}-sqlite_data_claim
+  name: {{ include "mqtt-topics-api.fullname" . }}-sqlite-data-claim
   labels:
     {{- include "mqtt-topics-api.labels" . | nindent 4 }}
     app.kubernetes.io/component: sqlite_data_claim

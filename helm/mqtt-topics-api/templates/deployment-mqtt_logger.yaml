@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt_logger
+  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt-logger
   labels:
     {{- include "mqtt-topics-api.labels" . | nindent 4 }}
     app.kubernetes.io/component: mqtt_logger
@@ -21,7 +21,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - name: mqtt_logger
+        - name: mqtt-logger
           image: {{ include "mqtt-topics-api.image" (dict "context" . "service" .Values.mqtt_logger.image.name) }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           volumeMounts:
@@ -55,7 +55,7 @@ spec:
       volumes:
         - name: {{ .Values.global.sqlite_data.name }}
           persistentVolumeClaim: 
-            claimName: {{ include "mqtt-topics-api.fullname" . }}-sqlite_data_claim
+            claimName: {{ include "mqtt-topics-api.fullname" . }}-sqlite-data-claim
         - name: config
           configMap:
             name: {{ include "mqtt-topics-api.fullname" . }}-config
