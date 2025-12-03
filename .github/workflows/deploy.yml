@@ -35,7 +35,7 @@ jobs:
           echo "services=${services}" >> $GITHUB_OUTPUT
 
   build-and-push:
-    depends-on: prepare
+    needs: prepare
     runs-on: ubuntu-latest
     strategy:
       matrix:
