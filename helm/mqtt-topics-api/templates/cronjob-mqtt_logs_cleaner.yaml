@@ -23,13 +23,13 @@ spec:
                 - name: MQTT_BROKER
                   value: {{ .Values.env_values.MQTT_BROKER }}
                 - name: MQTT_PORT
-                  value: {{ .Values.env_values.MQTT_PORT }}
+                  value: "5293"
                 - name: MQTT_TOPIC
                   value: {{ .Values.env_values.MQTT_TOPIC }}
                 - name: DB_PATH
                   value: {{ .Values.env_values.DB_PATH }}
                 - name: UNICORN_PORT
-                  value: {{ .Values.env_values.UNICORN_PORT }}
+                  value: "5283"
                 - name: MQTT_USER
                   valueFrom:
                     secretKeyRef:
