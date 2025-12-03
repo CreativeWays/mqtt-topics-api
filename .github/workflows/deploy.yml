@@ -188,8 +188,38 @@ jobs:
             --set mqtt_logger.image.name=mqtt_logger \
             --set mqtt_logs_api.image.name=mqtt_logs_api \
             --set mqtt_logs_cleaner.image.name=mqtt_logs_cleaner \
-            --wait \
+            --debug \
             --timeout 5m
+
+      - name: Debug deployment on failure
+        if: failure()
+        run: |
+          echo "=== Helm Release Status ==="
+          helm status ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}
+
+          echo -e "\n=== Deployment Status ==="
+          kubectl get deployments -n ${{ env.NAMESPACE }} -o wide
+
+          echo -e "\n=== Pod Status ==="
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+
+          echo -e "\n=== Pod Details ==="
+          for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o jsonpath='{.items[*].metadata.name}'); do
+            echo -e "\n--- Pod: $pod ---"
+            kubectl describe pod $pod -n ${{ env.NAMESPACE }}
+          done
+
+          echo -e "\n=== Pod Logs ==="
+          for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o jsonpath='{.items[*].metadata.name}'); do
+            echo -e "\n--- Logs for: $pod ---"
+            kubectl logs $pod -n ${{ env.NAMESPACE }} --tail=50 || echo "No logs available"
+          done
+
+          echo -e "\n=== Events ==="
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp'
+
+          echo -e "\n=== ReplicaSets ==="
+          kubectl get rs -n ${{ env.NAMESPACE }} -o wide
 
       - name: Verify deployment
         run: |
