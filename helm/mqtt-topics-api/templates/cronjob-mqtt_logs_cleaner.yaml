@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt_logs_cleaner
+  labels:
+    {{- include "mqtt-topics-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mqtt_logs_cleaner
+spec:
+  schedule: {{ .Values.mqtt_logs_cleaner.cronjob.schedule }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mqtt_logs_cleaner
+              image: {{ include "mqtt-topics-api.image" (dict "context" . "service" .Values.mqtt_logs_cleaner.image.name) }}
+              imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+              resources:
+                {{- toYaml .Values.mqtt_logs_api.resources | nindent 16 }}
+              env:
+                - name: MQTT_BROKER
+                  value: {{ .Values.env_values.MQTT_BROKER }}
+                - name: MQTT_PORT
+                  value: {{ .Values.env_values.MQTT_PORT }}
+                - name: MQTT_TOPIC
+                  value: {{ .Values.env_values.MQTT_TOPIC }}
+                - name: DB_PATH
+                  value: {{ .Values.env_values.DB_PATH }}
+                - name: UNICORN_PORT
+                  value: {{ .Values.env_values.UNICORN_PORT }}
+                - name: MQTT_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.global.mqtt_secrets.name }}
+                      key: MQTT_USER
+                - name: MQTT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.global.mqtt_secrets.name }} 
+                      key: MQTT_PASSWORD
+              volumeMounts:
+                - name: {{ .Values.global.sqlite_data.name }} 
+                  mountPath: {{ .Values.global.sqlite_data.mountPath }}
+          volumes:
+            - name: {{ .Values.global.sqlite_data.name }}
+              persistentVolumeClaim: 
+                claimName: {{ include "mqtt-topics-api.fullname" . }}-sqlite_data_claim

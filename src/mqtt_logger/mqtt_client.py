@@ -3,7 +3,7 @@ from typing import Any, Callable
 
 import paho.mqtt.client as mqtt
 
-from .config import MQTT_BROKER, MQTT_PASSWORD, MQTT_PORT, MQTT_TOPIC, MQTT_USER
+from shared.config import MQTT_BROKER, MQTT_PASSWORD, MQTT_PORT, MQTT_TOPIC, MQTT_USER
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,15 @@ class MQTTClient:
 
     def setup_callbacks(self):
         """Настраивает callback-функции MQTT клиента"""
-        self.client.on_connect = self._on_connect
-        self.client.on_message = self._on_message
-        self.client.on_disconnect = self._on_disconnect
+        self.client.on_connect = (  # pyright: ignore[reportAttributeAccessIssue]
+            self._on_connect
+        )
+        self.client.on_message = (  # pyright: ignore[reportAttributeAccessIssue]
+            self._on_message
+        )
+        self.client.on_disconnect = (  # pyright: ignore[reportAttributeAccessIssue]
+            self._on_disconnect
+        )
 
     def _on_connect(self, client: mqtt.Client, userdata: Any, flags: Any, rc: int):
         """Callback при подключении к брокеру"""
@@ -32,7 +38,9 @@ class MQTTClient:
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
         """Callback при получении сообщения"""
         try:
-            payload = msg.payload.decode()
+            payload = (
+                msg.payload.decode()  # pyright: ignore[reportAttributeAccessIssue]
+            )
             logger.info(f"Received `{payload}` from `{msg.topic}` topic")
             self.on_message_callback(msg.topic, payload)
         except Exception as e:
@@ -58,7 +66,7 @@ class MQTTClient:
         """Запускает цикл обработки сообщений"""
         self.client.loop_start()
 
-    def stop(self):
+    def stop_and_disconnect(self):
         """Останавливает клиент"""
         self.client.loop_stop()
         self.client.disconnect()
@@ -66,7 +74,10 @@ class MQTTClient:
     def publish(self, topic: str, payload: str):
         """Публикует сообщение в MQTT"""
         result = self.client.publish(topic, payload)
-        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+        if (
+            result.rc  # pyright: ignore[reportAttributeAccessIssue]
+            == mqtt.MQTT_ERR_SUCCESS
+        ):
             logger.info(f"Published `{payload}` to `{topic}`")
         else:
             logger.error(f"Failed to publish message: {result}")

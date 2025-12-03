@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mqtt-topics-api.fullname" . }}-mqtt_logger
+  labels:
+    {{- include "mqtt-topics-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mqtt_logger
+spec:
+  replicas: {{ .Values.mqtt_logger.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mqtt-topics-api.labels" . | nindent 6 }}
+      app.kubernetes.io/component: mqtt_logger
+  template:
+    metadata:
+      labels:
+        {{- include "mqtt-topics-api.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mqtt_logger
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: mqtt_logger
+          image: {{ include "mqtt-topics-api.image" (dict "context" . "service" .Values.mqtt_logger.image.name) }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          volumeMounts:
+            - name: {{ .Values.global.sqlite_data.name }} 
+              mountPath: {{ .Values.global.sqlite_data.mountPath }}
+            - name: config
+              mountPath: /app/config
+          resources:
+            {{- toYaml .Values.mqtt_logger.resources | nindent 12 }}
+          env:
+            - name: MQTT_BROKER
+              value: {{ .Values.env_values.MQTT_BROKER }}
+            - name: MQTT_PORT
+              value: {{ .Values.env_values.MQTT_PORT }}
+            - name: MQTT_TOPIC
+              value: {{ .Values.env_values.MQTT_TOPIC }}
+            - name: DB_PATH
+              value: {{ .Values.env_values.DB_PATH }}
+            - name: UNICORN_PORT
+              value: {{ .Values.env_values.UNICORN_PORT }}
+            - name: MQTT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.mqtt_secrets.name }}
+                  key: MQTT_USER
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.mqtt_secrets.name }} 
+                  key: MQTT_PASSWORD
+      volumes:
+        - name: {{ .Values.global.sqlite_data.name }}
+          persistentVolumeClaim: 
+            claimName: {{ include "mqtt-topics-api.fullname" . }}-sqlite_data_claim
+        - name: config
+          configMap:
+            name: {{ include "mqtt-topics-api.fullname" . }}-config
+            items:
+              - key: logger.conf
+                path: logger
+

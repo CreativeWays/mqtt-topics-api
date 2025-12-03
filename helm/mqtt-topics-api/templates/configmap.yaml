@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mqtt-topics-api.fullname" . }}-config
+  labels:
+    {{- include "mqtt-topics-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: configmap
+data:
+  logger: |
+    {{ .Values.mqtt_logger.service.type | nindent 4 }}

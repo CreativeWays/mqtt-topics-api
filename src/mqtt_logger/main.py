@@ -2,7 +2,8 @@ import logging
 import signal
 import sys
 
-from .config import LOG_LEVEL
+from shared.config import LOG_LEVEL, MQTT_BROKER
+
 from .mqtt_app import MQTTApp
 
 # Настройка логирования
@@ -14,13 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    print("Starting MQTT Logger...", MQTT_BROKER)
     """Точка входа в приложение"""
     app = MQTTApp()
 
     # Обработка сигналов для graceful shutdown
     def signal_handler(sig, frame):
         logger.info("Interrupt signal received")
-        app.stop()
+        app.stop_and_disconnect()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

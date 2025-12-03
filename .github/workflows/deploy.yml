@@ -1,56 +1,159 @@
-name: Deploy to VPS
+name: CI/CD to K3s
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: microservices
+  RELEASE_NAME: mqtt-topics-api
 
 jobs:
-  deploy:
+  # Define which services to build based on changes or build all
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed services
+        id: set-services
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logger/"; then
+            services="${services}\"mqtt_logger\","
+          fi
+          # repeat for other services
+          if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logs_api/"; then
+            services="${services}\"mqtt_logs_api\","
+          fi
+          if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logs_cleaner/"; then
+            services="${services}\"mqtt_logs_cleaner\","
+          fi
+          echo "services=${services}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    depends-on: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.prepare.outputs.services) }}
+      fail-fast: false
+      max-parallel: 3
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Deploy with SCP
-        uses: appleboy/scp-action@v1.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_PORT }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
-          target: "/opt/mqttapp"
-          strip_components: 1
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.2.2
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_PORT }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/mqttapp
-            # Install dependencies
-            # Remove existing venv if it exists
-            if [ -d "venv" ]; then
-              rm -rf venv
-              rm logs/*
-            fi
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            # Create new virtual environment
-            python3 -m venv venv
-            source venv/bin/activate
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=short
 
-            # echo "Installing dependencies..."
-            ./venv/bin/pip install --upgrade pip
-            ./venv/bin/pip install -r requirements.txt
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./src/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:buildcache,mode=max
 
-            # Restart the service
-            sudo systemctl daemon-reload
-            sudo systemctl restart mqttapp.service
-            sudo systemctl restart mqttapp-cleanup.service
-            sudo systemctl restart sensor-api.service
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-            # Check service status
-            sudo systemctl status mqttapp.service --no-pager
-            sudo systemctl status sensor-api.service --no-pager
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Set up Kubernetes
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: "latest"
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create / update k8s secret for app
+        run: |
+          kubectl create secret generic mqtt_secrets \
+            --from-literal=MQTT_USER='${{ secrets.MQTT_USER }}' \
+            --from-literal=MQTT_PASSWORD='${{ secrets.MQTT_PASSWORD }}' \
+            --namespace ${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy microservices with Helm
+        run: |
+          cd ./helm/mqtt-topics-api
+
+          helm upgrade --install ${{ env.RELEASE_NAME }} . \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
+            --set global.image.repository=${{ env.REGISTRY }}/${{ github.repository }} \
+            --set global.image.tag=latest \
+            --set mqtt_logger.image.name=mqtt_logger \
+            --set mqtt_logs_api.image.name=mqtt_logs_api \
+            --set mqtt_logs_cleaner.image.name=mqtt_logs_cleaner \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/mqtt-logger -n ${{ env.NAMESPACE }} --timeout=3m
+          kubectl rollout status deployment/mqtt-logs-api -n ${{ env.NAMESPACE }} --timeout=3m
+          kubectl get pods -n ${{ env.NAMESPACE }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: helm rollback ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}

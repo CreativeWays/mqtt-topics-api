@@ -1,11 +1,13 @@
 import logging
+import sys
+import os
 from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI, HTTPException, Query
 
-from .config import LOG_LEVEL, UNICORN_PORT
-from .database import DatabaseManager
+from shared.config import LOG_LEVEL, UNICORN_PORT
+from shared.database import DatabaseManager
 
 # Настройка логирования
 logging.basicConfig(

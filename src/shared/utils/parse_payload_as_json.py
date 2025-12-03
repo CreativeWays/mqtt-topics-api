@@ -1,7 +1,7 @@
 import json
 import logging
 
-from src.config import LOG_LEVEL
+from shared.config import LOG_LEVEL
 
 # Настройка логирования
 logging.basicConfig(

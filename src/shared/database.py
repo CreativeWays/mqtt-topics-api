@@ -1,10 +1,12 @@
 import logging
 import sqlite3
+import os
 from datetime import datetime, timedelta
 from threading import RLock, Timer
 from typing import Tuple
 
 from .config import BATCH_SIZE, BATCH_TIMEOUT, DB_PATH
+
 from .utils.decode_radiohead_payload import decode_radiohead_payload
 from .utils.parse_payload_as_json import parse_payload_as_json
 from .utils.serialize_json_payload_as_str import serialize_json_payload_as_str
@@ -17,11 +19,11 @@ radiohead_topic_name = "radiohead"
 class DatabaseManager:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
-        self.init_database()
         # Глобальные переменные для батча
         self.batch_buffer = []
         self.batch_lock = RLock()
         self.batch_timer = None
+        self.init_database()
 
     def get_connection(self) -> sqlite3.Connection:
         """Создает и возвращает соединение с базой данных"""
@@ -99,7 +101,6 @@ class DatabaseManager:
             self.batch_buffer = []
             # Перезапускаем таймер для следующего батча
             self.batch_timer = None
-            self.start_batch_timer()
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()

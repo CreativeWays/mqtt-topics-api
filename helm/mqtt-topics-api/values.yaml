@@ -1,0 +1,60 @@
+global:
+  image:
+    repository: ghcr.io/CreativeWays
+    tag: latest
+    pullPolicy: IfNotPresent
+  environment: production
+  sqlite_data:
+    name: sqlite_data
+    mountPath: /app/data
+    persistence:
+      size: 2Gi
+      storageClassName: "standard" # Adjust based on your cluster
+      accessMode: ReadWriteOnce
+  mqtt_secrets:
+    name: mqtt_secrets
+
+mqtt_logger:
+  replicaCount: 1
+  image:
+    name: mqtt_logger
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+mqtt_logs_api:
+  replicaCount: 1
+  image:
+    name: mqtt_logs_api
+  service:
+    type: NodePort
+    port: 5283
+    nodePort: 5283
+    targetPort: 5283
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+mqtt_logs_cleaner:
+  replicaCount: 1
+  image:
+    name: mqtt_logs_cleaner
+  cronjob:
+    schedule: "0 3 * * *"
+
+env_values:
+  MQTT_BROKER: "127.0.0.1"
+  MQTT_PORT: 5293
+  MQTT_TOPIC: "device/OMG_lilygo_rtl_433_ESP_OOK/RTL_433toMQTT/#"
+  DB_PATH: "/app/data/app.db"
+  UNICORN_PORT: 5283

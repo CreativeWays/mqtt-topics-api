@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "mqtt-topics-api.fullname" . }}-sqlite_data_claim
+  labels:
+    {{- include "mqtt-topics-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sqlite_data_claim
+spec:
+  accessModes:
+    - {{ .Values.global.sqlite_data.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.global.sqlite_data.persistence.size | default "2Gi" }}
+  storageClassName: {{ .Values.global.sqlite_data.persistence.storageClassName }}
+

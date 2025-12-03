@@ -16,7 +16,7 @@ MQTT_TOPIC = os.getenv("MQTT_TOPIC", "myapp/sensors/temperature")
 DB_PATH = str(
     os.getenv(
         "DB_PATH",
-        os.path.join(os.path.dirname(__file__), "data", "app.db"),
+        os.path.join(os.path.dirname(__file__), "../../data", "app.db"),
     )
 )
 
@@ -27,4 +27,4 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", 300))  # Размер пачки
 BATCH_TIMEOUT = int(
     os.getenv("BATCH_TIMEOUT", 180.0)
 )  # Таймаут в секундах (даже если не набралось BATCH_SIZE)
-UNICORN_PORT = int(os.getenv("UNICORN_PORT", 52933))
+UNICORN_PORT = int(os.getenv("UNICORN_PORT", 5283))

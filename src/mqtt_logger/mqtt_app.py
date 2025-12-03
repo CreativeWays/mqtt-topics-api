@@ -1,8 +1,9 @@
 import logging
 import time
 
-from .config import LOG_LEVEL
-from .database import DatabaseManager
+from shared.config import LOG_LEVEL
+from shared.database import DatabaseManager
+
 from .mqtt_client import MQTTClient
 
 # Настройка логирования
@@ -50,10 +51,10 @@ class MQTTApp:
         except Exception as e:
             logger.error(f"Application error: {e}")
         finally:
-            self.stop()
+            self.stop_and_disconnect()
 
-    def stop(self):
+    def stop_and_disconnect(self):
         """Останавливает приложение"""
         self.running = False
-        self.mqtt_client.stop()
+        self.mqtt_client.stop_and_disconnect()
         logger.info("Application stopped")
