@@ -15,27 +15,56 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.set-services.outputs.services }}
+      has_services: ${{ steps.set-services.outputs.has_services }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Need at least 2 commits to compare
 
       - name: Detect changed services
         id: set-services
         run: |
+          # Default to all services
+          ALL_SERVICES='["mqtt_logger", "mqtt_logs_api", "mqtt_logs_cleaner"]'
+
+          # Detect changed services
+          changed_services=""
           if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logger/"; then
-            services="${services}\"mqtt_logger\","
+            changed_services="${changed_services}\"mqtt_logger\","
           fi
           # repeat for other services
           if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logs_api/"; then
-            services="${services}\"mqtt_logs_api\","
+            changed_services="${changed_services}\"mqtt_logs_api\","
           fi
           if git diff --name-only HEAD~1 HEAD | grep -q "src/mqtt_logs_cleaner/"; then
-            services="${services}\"mqtt_logs_cleaner\","
+            changed_services="${changed_services}\"mqtt_logs_cleaner\","
           fi
-          echo "services=${services}" >> $GITHUB_OUTPUT
+          # Check if shared code changed - rebuild all services
+          if git diff --name-only HEAD~1 HEAD | grep -q "^src/shared/\|^pyproject.toml\|^.github/workflows/"; then
+            echo "Shared code or dependencies changed, building all services"
+            echo "services=$ALL_SERVICES" >> $GITHUB_OUTPUT
+            echo "has_services=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # If services were detected, format as JSON array
+          if [ -n "$changed_services" ]; then
+            # Remove trailing comma and wrap in array brackets
+            changed_services="[${changed_services%,}]"
+            echo "Changed services detected: $changed_services"
+            echo "services=$changed_services" >> $GITHUB_OUTPUT
+            echo "has_services=true" >> $GITHUB_OUTPUT
+          else
+            # No changes detected - use empty array
+            echo "No service changes detected"
+            echo "services=[]" >> $GITHUB_OUTPUT
+            echo "has_services=false" >> $GITHUB_OUTPUT
+          fi
 
   build-and-push:
     needs: prepare
+    if: needs.prepare.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,9 +124,12 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy:
-    needs: build-and-push
+    needs: [prepare, build-and-push]
+    if: |
+      always() && 
+      needs.prepare.result == 'success' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
 
