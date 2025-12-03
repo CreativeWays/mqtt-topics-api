@@ -14,7 +14,7 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: mqtt_logs_cleaner
+            - name: mqtt-logs-cleaner
               image: {{ include "mqtt-topics-api.image" (dict "context" . "service" .Values.mqtt_logs_cleaner.image.name) }}
               imagePullPolicy: {{ .Values.global.image.pullPolicy }}
               resources:
