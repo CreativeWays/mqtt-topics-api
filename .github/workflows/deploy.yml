@@ -123,10 +123,11 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ steps.repo.outputs.repository }}/${{ matrix.service }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ steps.repo.outputs.repository }}/${{ matrix.service }}:buildcache,mode=max
 
-      - name: Move cache
+      - name: Cleanup buildx cache
+        if: always()
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          docker buildx prune --force --filter until=72h
+          docker buildx du
 
   deploy:
     needs: [prepare, build-and-push]
