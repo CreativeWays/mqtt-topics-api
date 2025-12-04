@@ -227,6 +227,6 @@ jobs:
           kubectl rollout status deployment/mqtt-logs-api -n ${{ env.NAMESPACE }} --timeout=3m
           kubectl get pods -n ${{ env.NAMESPACE }}
 
-      - name: Rollback on failure
-        if: failure()
-        run: helm rollback ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}
+      # - name: Rollback on failure
+      #   if: failure()
+      #   run: helm rollback ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}

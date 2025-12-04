@@ -9,7 +9,7 @@ global:
     mountPath: /app/data
     persistence:
       size: 2Gi
-      storageClassName: "standard" # Adjust based on your cluster
+      storageClassName: "local-path"
       accessMode: ReadWriteOnce
   mqtt_secrets:
     name: mqtt-secrets
