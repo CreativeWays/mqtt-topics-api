@@ -42,7 +42,7 @@ jobs:
           fi
           # Check if shared code changed - rebuild all services
           if git diff --name-only HEAD~1 HEAD | grep -q "^src/shared/\|^pyproject.toml\|^.github/workflows/"; then
-            echo "Shared code or dependenciess changed, building all services"
+            echo "Shared code or dependencies changed, building all services"
             echo "services=$ALL_SERVICES" >> $GITHUB_OUTPUT
             echo "has_services=true" >> $GITHUB_OUTPUT
             exit 0

@@ -59,6 +59,6 @@ spec:
           configMap:
             name: {{ include "mqtt-topics-api.fullname" . }}-config
             items:
-              - key: logger.conf
-                path: logger
+              - key: logger
+                path: logger.conf
 
